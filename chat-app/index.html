@@ -1,183 +1,115 @@
 <!DOCTYPE html>
 <html lang="en">
-  <head>
-    <meta charset="UTF-8" />
-    <meta http-equiv="X-UA-Compatible" content="IE=edge" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Document</title>
-    <link rel="stylesheet" href="./chat.css" />
-  </head>
-  <body>
-    <div style="padding: 12px; background-color: #eee">
-      <form>
-        <input type="text" id="name" />
-        <button id="signIn" type="submit">로그인</button>
+
+<head>
+  <meta charset="UTF-8" />
+  <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Document</title>
+  <link rel="stylesheet" href="./chat.css" />
+</head>
+
+<body>
+  <div style="padding: 12px; background-color: #eee">
+    <form id="signInForm">
+      <input type="text" id="name" />
+      <button id="signIn" type="submit">로그인</button>
+    </form>
+
+    <button id="signOut"><span id="userName"></span>로그아웃</button>
+  </div>
+
+  <article id="chat" class="chat__container">
+    <section id="chatMessagesContainer" class="chat-gutter chat__messages-container">
+      <ul id="chatMessages" class="chat-unstyled-list chat__messages"></ul>
+    </section>
+
+    <section class="chat-gutter chat__form-container">
+      <form id="chatForm" class="chat__form">
+        <input id="chatMessageInput" type="text" class="chat-rounded chat__form-input"
+          data-unauth-placeholder="로그인을 해 주세요." />
+        <button type="submit" class="chat-button chat-rounded chat__form-submit">
+          입력
+        </button>
       </form>
+    </section>
 
-      <button id="signOut">로그아웃</button>
-    </div>
+    <div class="chat__loading">Loading...</div>
+  </article>
 
-    <article id="chat" class="chat__container">
-      <section
-        id="chatMessagesContainer"
-        class="chat-gutter chat__messages-container"
-      >
-        <ul id="chatMessages" class="chat-unstyled-list chat__messages"></ul>
-      </section>
+  <template id="chatMessageTemplate">
+    <li class="chat__message chat__message--message">
+      <span class="chat__message-user">
+        <img src="{icon}" alt="" class="chat__message-user__icon" />
 
-      <section class="chat-gutter chat__form-container">
-        <form id="chatForm" class="chat__form">
-          <input
-            id="chatNewMessage"
-            type="text"
-            class="chat-rounded chat__form-input"
-          />
-          <button
-            type="submit"
-            class="chat-button chat-rounded chat__form-submit"
-          >
-            입력
-          </button>
-        </form>
-      </section>
+        <strong class="chat-ellipsis chat__message-user__name">{name}</strong>
+      </span>
+      <span class="chat__message-text">{content}</span>
+    </li>
+  </template>
 
-      <div class="chat__loading">Loading...</div>
-    </article>
+  <template id="chatDefaultMessageTemplate">
+    <li class="chat__message chat__message--{type}">{content}</li>
+  </template>
 
-    <template id="chatMessageTemplate">
-      <li class="chat__message chat__message--message">
-        <span class="chat__message-user">
-          <img src="{icon}" alt="" class="chat__message-user__icon" />
+  <script src="https://cdn.socket.io/4.5.4/socket.io.min.js"></script>
+  <script src="./chat.js"></script>
 
-          <strong class="chat-ellipsis chat__message-user__name">{name}</strong>
-        </span>
-        <span class="chat__message-text">{content}</span>
-      </li>
-    </template>
+  <script>
 
-    <template id="chatMessageTypeTemplate">
-      <li class="chat__message chat__message--{type}">{content}</li>
-    </template>
+    var nameInputEl = document.getElementById('name');
+    var userNameEl = document.getElementById('userName');
+    var signInFormEl = document.getElementById('signInForm');
+    var signOutEl = document.getElementById('signOut');
 
-    <script src="https://cdn.socket.io/4.5.4/socket.io.min.js"></script>
-    <script src="./chat.js"></script>
+    var defaultUserIcon = 'https://simg.powerballgame.co.kr/images/class/M15.gif';
 
-    <script>
-      var chatRooms = ["general"];
-      var defaultChatRoom = chatRooms[0];
+    var chatIO = io('ws://localhost:5001');
 
-      var defaultUserIcon =
-        "https://simg.powerballgame.co.kr/images/class/M15.gif";
+    var currentUser = {
+      name: '',
+      icon: defaultUserIcon,
+    }
 
-      var currentUser = {
-        name: "",
-        icon: "",
-      };
+    var chatApp = new Chat(chatIO, currentUser);
 
-      var chatIO = io("http://localhost:3000");
+    window.addEventListener('load', function (e) {
+      chatApp.joinRoom();
+    });
 
-      var messageTemplate = document.getElementById("chatMessageTemplate");
-      var messageTypeTemplate = document.getElementById(
-        "chatMessageTypeTemplate"
-      );
+    if (currentUser.name) {
+      signInFormEl.style = "display:none";
+    }
 
-      var messagesContainerEl = document.getElementById(
-        "chatMessagesContainer"
-      );
 
-      var messagesEl = document.getElementById("chatMessages");
-      var formEl = document.getElementById("chatForm");
-      var messageEl = document.getElementById("chatNewMessage");
+    signInFormEl.addEventListener('submit', function (e) {
+      e.preventDefault();
 
-      window.addEventListener("load", function (e) {
-        chatIO.emit("join-room", defaultChatRoom, "");
-      });
+      var name = nameInputEl.value;
 
-      var signInEl = document.getElementById("signIn");
-      signInEl.addEventListener("click", function (e) {
-        e.preventDefault();
+      if (!name) {
+        alert('이름을 입력해 주세요.');
+        name.focus();
 
-        var name = document.getElementById("name").value;
+        return;
+      }
 
-        if (!name) {
-          alert("이름을 입력해 주세요.");
-          name.focus();
+      currentUser = { name: name, icon: defaultUserIcon };
 
-          return;
-        }
+      chatApp.setUser(currentUser);
+      nameInputEl.value = '';
 
-        currentUser = {
-          name,
-          icon: defaultUserIcon,
-        };
+      signInFormEl.style = "display: none";
+      userNameEl.textContent = name + '님 ';
+    });
 
-        chatIO.emit("new-user", currentUser);
-      });
+    signOutEl.addEventListener('click', function (e) {
+      chatApp.removeUser();
+      signOutEl.style = "display: none";
+      signInFormEl.style = "display: unset";
+    });
 
-      var signOutEl = document.getElementById("signOut");
-      signOutEl.addEventListener("click", function (e) {
-        chatIO.emit("sign-out", currentUser);
-        currentUser = {
-          name: "",
-        };
-      });
+  </script>
+</body>
 
-      formEl.addEventListener("submit", function (e) {
-        e.preventDefault();
-
-        var newMessage = messageEl.value;
-
-        if (newMessage) {
-          const now = new Date();
-
-          chatIO.emit(
-            "message-room",
-            defaultChatRoom,
-            newMessage,
-            currentUser,
-            now.getTime(),
-            now
-          );
-
-          messageEl.value = "";
-        } else {
-          alert("메세지를 입력해 주세요.");
-          messageEl.focus();
-        }
-      });
-
-      chatIO.off("room-messages").on("room-messages", function (messages) {
-        var _messages = messages.length < 1 ? MESSAGES_MOCK : messages;
-
-        var initialMessagesTemplateString = _messages
-          .map(function (message) {
-            const type = message.type;
-
-            var template =
-              type === "message" ? messageTemplate : messageTypeTemplate;
-
-            var from = message.from || {};
-
-            return createTemplateString(template, {
-              type: type,
-              content: message.content,
-              name: from.name || "",
-              icon: from.icon || "",
-            });
-          })
-          .join("");
-
-        messagesEl.insertAdjacentHTML(
-          "beforeend",
-          initialMessagesTemplateString
-        );
-
-        messagesContainerEl.scrollTop = messagesContainerEl.scrollHeight;
-      });
-
-      chatIO.off("notifications").on("notifications", function (room) {
-        console.log("notifications", room);
-      });
-    </script>
-  </body>
 </html>

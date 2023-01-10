@@ -179,3 +179,12 @@
 .chat__form-input + .chat__form-submit {
   margin-left: 4px;
 }
+
+.chat__form[disabled='true'] .chat__form-input {
+  background-color: #eee;
+}
+
+.chat__form[disabled='true'] .chat__form-submit {
+  cursor: not-allowed;
+  opacity: 0.4;
+}
